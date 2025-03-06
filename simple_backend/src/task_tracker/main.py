@@ -3,8 +3,11 @@ import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict
+from cloudflare_ai import CloudflareAI 
 
 app = FastAPI(title="Task Manager API")
+ai = CloudflareAI(api_url="https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/text",
+                  api_key=os.getenv("bvrlI_M2mfc-D1sMvdqucoHwUb4nkgd5K_ZMqdz-"))  
 
 TASKS_FILE = "tasks.json"
 API_URL = 'https:// 67c7475ac19eb8753e794b78.mockapi.io/api/v1/tasks'
