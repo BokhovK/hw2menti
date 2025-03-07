@@ -1,116 +1,53 @@
-import json
-import os
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Dict
-from cloudflare_ai import CloudflareAI 
+from models import Task, TaskCreate, TaskUpdate
+from storage import TaskStorage
+from clients import LLMClient
 
-app = FastAPI(title="Task Manager API")
-ai = CloudflareAI(api_url="https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/text",
-                  api_key=os.getenv("bvrlI_M2mfc-D1sMvdqucoHwUb4nkgd5K_ZMqdz-"))  
+app = FastAPI(title="Task Tracker API")
 
-TASKS_FILE = "tasks.json"
-API_URL = 'https:// 67c7475ac19eb8753e794b78.mockapi.io/api/v1/tasks'
-
-class Task(BaseModel):
-    description: str
-    done: bool = False
+storage = TaskStorage()
 
 
-class TaskUpdate(BaseModel):
-    description: Optional[str] = None
-    done: Optional[bool] = None
+LLM_API_KEY = "your_cloudflare_api_key"
+llm_client = LLMClient(api_key=LLM_API_KEY)
 
+@app.get("/tasks", response_model=list[Task])
+def get_tasks():
+    """
+    Возвращаем список всех задач
+    """
+    return storage.get_tasks()
 
-class TaskManager:
-    def __init__(self, filepath: str = TASKS_FILE):
-        self.filepath = filepath
-        self.tasks: Dict[str, dict] = {}
-        self.load_tasks()
-
-    def load_tasks(self):
-        if os.path.exists(self.filepath):
-            try:
-                with open(self.filepath, 'r', encoding='utf-8') as f:
-                    self.tasks = json.load(f)
-            except json.JSONDecodeError:
-                print("Ошибка: не удалось разобрать JSON из файла. Будет использовано пустое хранилище.")
-                self.tasks = {}
-        else:
-            self.tasks = {}
-
-    def save_tasks(self):
-        with open(self.filepath, 'w', encoding='utf-8') as f:
-            json.dump(self.tasks, f, ensure_ascii=False, indent=4)
-
-    def get_all_tasks(self):
-        return self.tasks
-
-    def get_task(self, task_id: str):
-        return self.tasks.get(task_id)
-
-    def add_task(self, task_id: str, task: Task):
-        if task_id in self.tasks:
-            raise ValueError("Задача с таким идентификатором уже существует.")
-        self.tasks[task_id] = task.dict()
-        self.save_tasks()
-
-    def update_task(self, task_id: str, task_data: TaskUpdate):
-        if task_id not in self.tasks:
-            raise KeyError("Задача не найдена.")
-        if task_data.description is not None:
-            self.tasks[task_id]['description'] = task_data.description
-        if task_data.done is not None:
-            self.tasks[task_id]['done'] = task_data.done
-        self.save_tasks()
-
-    def remove_task(self, task_id: str):
-        if task_id not in self.tasks:
-            raise KeyError("Задача не найдена.")
-        del self.tasks[task_id]
-        self.save_tasks()
-
-
-
-task_manager = TaskManager()
-
-
-@app.get("/tasks", response_model=Dict[str, Task])
-def read_tasks():
-    return task_manager.get_all_tasks()
-
-
-@app.get("/tasks/{task_id}", response_model=Task)
-def read_task(task_id: str):
-    task = task_manager.get_task(task_id)
-    if task is None:
-        raise HTTPException(status_code=404, detail="Задача не найдена")
-    return task
-
-
-@app.post("/tasks/{task_id}", response_model=Task)
-def create_task(task_id: str, task: Task):
-    try:
-        task_manager.add_task(task_id, task)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    return task
-
+@app.post("/tasks", response_model=Task)
+def create_task(task_create: TaskCreate):
+    """
+    Создаём новую задачу. При создании отправляем текст задачи в LLM для получения способов решения.
+    И если LLM возвращает пояснение, добавляем его в название задачи (или можно расширить модель).
+    """
+    explanation = llm_client.get_task_solution(task_create.title)
+    # Например, добавляем пояснение в конец названия
+    task_create.title = f"{task_create.title}\nРешение: {explanation}"
+    new_task = storage.create_task(task_create)
+    return new_task
 
 @app.put("/tasks/{task_id}", response_model=Task)
-def update_task(task_id: str, task_data: TaskUpdate):
+def update_task(task_id: int, task_update: TaskUpdate):
+    """
+    Обновляем информацию о задаче
+    """
     try:
-        task_manager.update_task(task_id, task_data)
-        updated_task = task_manager.get_task(task_id)
-        return updated_task
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        updated = storage.updatetask(taskid, taskupdate)
+        return updated
+    except ValueError:
+        raise HTTPException(statuscode=404, detail="Task not found")
 
-
-@app.delete("/tasks/{task_id}")
-def delete_task(task_id: str):
-    try:
-        task_manager.remove_task(task_id)
-        return {"detail": "Задача удалена"}
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    @app.delete("/tasks/{taskid}")
+    def deletetask(taskid: int):
+        """
+        Удаляем задачу
+        """
+        try:
+            storage.deletetask(taskid)
+            return {"detail": "Task deleted"}
+        except Exception as e:
+            raise HTTPException(statuscode=400, detail=str(e))
