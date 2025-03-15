@@ -2,14 +2,16 @@ from fastapi import FastAPI, HTTPException
 from models import Task, TaskCreate, TaskUpdate
 from storage import TaskStorage
 from clients import LLMClient
+from dotenv import load_dotenv
+import os
 
 app = FastAPI(title="Task Tracker API")
 
 storage = TaskStorage()
 
 
-LLM_API_KEY = "your_cloudflare_api_key"
-llm_client = LLMClient(api_key=LLM_API_KEY)
+LLM_API_KEY = os.getenv("LLM_API_KEY")
+print(LLM_API_KEY)
 
 @app.get("/tasks", response_model=list[Task])
 def get_tasks():
