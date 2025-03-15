@@ -12,37 +12,37 @@ class TaskStorage:
             with open(self.filepath, "w", encoding="utf-8") as f:
                 json.dump([], f)
 
-    def readtasks(self) -> List[Task]:
+    def read_tasks(self) -> List[Task]:
         with open(self.filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
             return list(Task(*item) for item in data)
 
-    def writetasks(self, tasks: List[Task]) -> None:
+    def write_tasks(self, tasks: List[Task]) -> None:
         with open(self.filepath, "w", encoding="utf-8") as f:
             json.dump([task.dict() for task in tasks], f, ensureascii=False, indent=4)
 
     def gettasks(self) -> List[Task]:
-        return self.readtasks()
+        return self.read_tasks()
 
-    def createtask(self, taskdata: TaskCreate) -> Task:
-        tasks = self.readtasks()
+    def create_task(self, taskdata: TaskCreate) -> Task:
+        tasks = self.read_tasks()
         newid = max((task.id for task in tasks), default=0) + 1
         newtask = Task(id=newid, title=taskdata.title, status=taskdata.status)
         tasks.append(newtask)
         self.writetasks(tasks)
         return newtask
 
-    def updatetask(self, taskid: int, taskupdate: TaskUpdate) -> Task:
+    def update_task(self, taskid: int, taskupdate: TaskUpdate) -> Task:
         tasks = self.readtasks()
         for i, task in enumerate(tasks):
             if task.id == taskid:
                 updatedtask = task.copy(update=taskupdate.dict(exclude_unset=True))
                 tasks[i] = updatedtask
-                self.writetasks(tasks)
+                self.write_tasks(tasks)
                 return updatedtask
         raise ValueError("Task not found")
 
-    def deletetask(self, taskid: int) -> None:
-        tasks = self.readtasks()
+    def delete_task(self, taskid: int) -> None:
+        tasks = self.read_tasks()
         tasks = [task for task in tasks if task.id != taskid]
-        self.writetasks(tasks)
+        self.write_tasks(tasks)

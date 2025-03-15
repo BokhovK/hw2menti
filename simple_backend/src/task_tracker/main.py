@@ -36,18 +36,18 @@ def update_task(task_id: int, task_update: TaskUpdate):
     Обновляем информацию о задаче
     """
     try:
-        updated = storage.updatetask(taskid, taskupdate)
+        updated = storage.updatetask(task_id, task_update)
         return updated
     except ValueError:
         raise HTTPException(statuscode=404, detail="Task not found")
 
-    @app.delete("/tasks/{taskid}")
-    def deletetask(taskid: int):
-        """
-        Удаляем задачу
-        """
-        try:
-            storage.deletetask(taskid)
-            return {"detail": "Task deleted"}
-        except Exception as e:
-            raise HTTPException(statuscode=400, detail=str(e))
+@app.delete("/tasks/{taskid}")
+def deletetask(taskid: int):
+    """
+    Удаляем задачу
+    """
+    try:
+        storage.deletetask(taskid)
+        return {"detail": "Task deleted"}
+    except Exception as e:
+        raise HTTPException(statuscode=400, detail=str(e))

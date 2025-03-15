@@ -6,17 +6,22 @@ class BaseHTTPClient(abc.ABC):
         self.base_url = base_url
         self.headers = headers or {}
 
+    def _request(self, method: str, endpoint: str, data: dict = None) -> dict:
+            url = f"{self.base_url}{endpoint}"
+            if method.upper() == 'GET':
+                response = requests.get(url, headers=self.headers)
+            elif method.upper() == 'POST':
+                response = requests.post(url, json=data, headers=self.headers)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
+            response.raise_for_status()
+            return response.json()
+
     def post(self, endpoint: str, data: dict) -> dict:
-        url = f"{self.base_url}{endpoint}"
-        response = requests.post(url, json=data, headers=self.headers)
-        response.raise_for_status()
-        return response.json()
+        return self._request('POST', endpoint, data=data)
 
     def get(self, endpoint: str) -> dict:
-        url = f"{self.base_url}{endpoint}"
-        response = requests.get(url, headers=self.headers)
-        response.raise_for_status()
-        return response.json()
+        return self._request('GET', endpoint)
 
     @abc.abstractmethod
     def process_response(self, response: dict) -> dict:
