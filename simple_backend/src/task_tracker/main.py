@@ -26,7 +26,7 @@ def create_task(task_create: TaskCreate):
     Создаём новую задачу. При создании отправляем текст задачи в LLM для получения способов решения.
     И если LLM возвращает пояснение, добавляем его в название задачи (или можно расширить модель).
     """
-    explanation = llm_client.get_task_solution(task_create.title)
+    explanation = LLM_API_KEY.get_task_solution(task_create.title)
     # Например, добавляем пояснение в конец названия
     task_create.title = f"{task_create.title}\nРешение: {explanation}"
     new_task = storage.create_task(task_create)
@@ -44,12 +44,12 @@ def update_task(task_id: int, task_update: TaskUpdate):
         raise HTTPException(statuscode=404, detail="Task not found")
 
 @app.delete("/tasks/{taskid}")
-def deletetask(taskid: int):
+def delete_task(taskid: int):
     """
     Удаляем задачу
     """
     try:
-        storage.deletetask(taskid)
+        storage.delete_task(taskid)
         return {"detail": "Task deleted"}
     except Exception as e:
         raise HTTPException(statuscode=400, detail=str(e))
